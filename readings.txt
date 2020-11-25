@@ -1,0 +1,35 @@
+USING STREAMS
+10 - 1 dense layer
+1000 iterations
+
+520.663ms
+596.160ms
+562.923ms
+
+2000 iterations
+
+771.037ms
+830.741ms
+862.306ms
+833.980ms
+
+10000 iterations
+
+3089.678ms
+3485.356ms
+
+LOAD every thing in ram
+
+1000 iterations
+276.828ms 
+210.865m
+225.474ms
+
+2000 iterations
+373.211ms
+446.083
+
+10000 iterations
+1290.912ms
+1939.882m
+2160.771
