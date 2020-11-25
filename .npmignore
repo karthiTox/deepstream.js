@@ -2,3 +2,11 @@ src/
 examples/
 node_modules/
 tests/
+
+.babelrc
+.gitignore
+.npmignore
+readings.txt
+rollup.config.js
+tsconfig_test.txt
+tsconfig.json

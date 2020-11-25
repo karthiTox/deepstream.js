@@ -5,6 +5,26 @@
 ## What is this ?
 Train your neural network using streams,<br> this project is implemented using Node.js and the main goal of this project is to make it easier to train large neural networks
 
+## Installation
+
+### npm
+
+```bash
+npm install deepsteam.js --save
+```
+### Node
+
+```js
+Node
+const ds = require('deepsteam.js');
+
+const transforms = ds.core.transforms;
+const ops = ds.core.operations;
+
+const activations = ds.core.activations:
+const layers = ds.layers
+```
+
 ## What is Stream?
 According to wikipedia, stream is a sequence of data elements made available over time. A stream can be thought of as items on a conveyor belt being processed one at a time rather than in large batches.
 
