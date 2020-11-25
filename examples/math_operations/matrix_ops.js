@@ -1,4 +1,4 @@
-const ds = require("deepstream");
+const ds = require("deepstream.js");
 const { createVertex, matmul2d, transpose, vertex} = ds.core.transforms
 const { logger } = ds.core.tools;
 const { Readable } = require("stream");

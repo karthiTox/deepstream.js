@@ -1,4 +1,4 @@
-const ds = require("deepstream");
+const ds = require("deepsteam.js");
 const {createVertex, add, sub, multiply} = ds.core.operations
 const {logger} = ds.core.tools;
 const { Readable } = require("stream");
