@@ -1,17 +1,24 @@
-import { Transform, TransformCallback, TransformOptions } from "stream";
+import { Readable, Transform, TransformCallback, TransformOptions } from "stream";
 import { _details } from "../vertex";
+import { data } from "./data.interface";
 
-export class _apply_fn extends Transform{
+export class Applyfn extends Transform{
 
     constructor(
-        options:TransformOptions, 
-        private details:_details, private fn:(n:any)=>{}
+         private fn:(n:any)=>{}
     ){
-        super(options);        
+        super({objectMode:true, highWaterMark:1});        
     }
 
-    _transform(c:any, en:BufferEncoding, next:TransformCallback){        
-        this.push([c[0],  this.fn(c[1]), this.details.id, c[3]]);                    
+    _transform(data:data, en:BufferEncoding, next:TransformCallback){        
+        data.value = this.fn(data.value) as number;    
+        this.push(data);                    
         next();       
     }
+}
+
+export function applyfn(a:Readable|Transform, fn:(n:any)=>{}){
+    const applyfn = new Applyfn(fn);
+    a.pipe(applyfn);
+    return applyfn;
 }

@@ -4,7 +4,7 @@ import { Readable, Transform } from "stream";
 import { sig, sigPrime } from "../core/activations";
 import { apply_act } from "../core/apply_act";
 import { add } from "../core/basic";
-import { logger } from "../core/log";
+import { logger } from "../core/transforms/log";
 import { matmul2d, transpose } from "../core/mat";
 import { _cstep } from "../core/transforms/_mat";
 import { genDetails, vertex } from "../core/vertex";

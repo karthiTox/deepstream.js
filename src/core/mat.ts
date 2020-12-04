@@ -1,4 +1,4 @@
-import { logger } from "./log";
+import { logger } from "./transforms/log";
 import { genId, _details, vertex } from "./vertex";
 import { _mapper, _reducer, _mapper_options, _reducer_options, _transpose, _transpose_options, _cstep_change, _cstep } from "./transforms/_mat";
 import { _memory } from "./transforms/_memory";

@@ -7,7 +7,7 @@ import {
     TransformOptions, 
     TransformCallback, 
 } from "stream";
-import { dataWriter } from "../log";
+import { dataWriter } from "./log";
 
 export class _memory{
     private in_;

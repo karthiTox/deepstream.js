@@ -1,44 +1,7 @@
 import { Readable, Stream, Transform, TransformCallback, TransformOptions} from "stream"
-import { dataWriter } from "../log";
-
-export function _cstep(shape:number[]):number[]{   
-    const res = [];
-    for(let s = shape.length; s > 0; s--){
-        if(!shape[s]) 
-            res.unshift(1);
-        else
-            res.unshift(
-                shape.slice(s).reduce((a, b) => a * b)
-            );        
-    }
-    return res;    
-}
-
-export function _cstep_change(step:number[], dimension:number[]):number[]{    
-    const res = [];
-    for(let d = 0; d < dimension.length; d++){
-        res[d] = step[dimension[d]]
-    }
-    return res;
-}
-
-export function _cindex(index:number[], step:number[]):number{
-    let res = 0; 
-    for(let i = 0; i < index.length; i++){        
-        res += index[i] * step[i];
-    }
-    return res;
-}
-
-export function _findIndex(shape:number[], step:number[], index:number):number[]{    
-    const _s = [];
-    for(let s = 0; s < shape.length; s++){
-        _s[s] = shape[s] * step[s]; 
-        _s[s] = Math.floor((index%_s[s]) / step[s]);
-    }
-    
-    return _s;
-}
+import { data } from "./data.interface";
+import { dataWriter } from "./log";
+import {_cindex, _cstep, _cstep_change, _findIndex} from "./utils"
 
 export interface _transpose_options{
     shape:number[],
@@ -90,21 +53,25 @@ export interface _mapper_options{
 }
 
 export class _mapper extends Transform{
+    private i:number|null = null; 
+    private i:number|null = null; 
+    private i:number|null = null; 
+
     constructor(
-        private mapper_options:_mapper_options,
-        tansform_options:TransformOptions
+        private fid:number,
+        private sid:number
     ){
-        super(tansform_options);
+        super({objectMode:true, highWaterMark:1});
     }
 
-    _transform(c:any, e:BufferEncoding, next:TransformCallback){                        
+    _transform(data:data, e:BufferEncoding, next:TransformCallback){                        
         // finding index
-        const _shape = this.mapper_options.inputs[c[2]].shape;
-        const _step = this.mapper_options.inputs[c[2]].step;
-        let index = _findIndex(_shape, _step, c[0]);            
+        const _shape = data.shape;
+        const _step = _cstep(data.shape);
+        let index = _findIndex(_shape, _step, data.index);            
 
         // mapping respectively
-        if(this.mapper_options.inputs[c[2]].place == 0){
+        if(data.id == this.fid){
             let i = index[0];
             let j = index[1];
             
@@ -118,7 +85,7 @@ export class _mapper extends Transform{
             }
         }
 
-        else if(this.mapper_options.inputs[c[2]].place == 1){
+        else if(data.id == this.sid){
             let j = index[0];
             let k = index[1];
 

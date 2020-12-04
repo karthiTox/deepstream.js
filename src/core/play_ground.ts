@@ -1,6 +1,6 @@
 import { Readable } from "stream";
 import { add, multiply, sub } from "./basic";
-import { logger } from "./log";
+import { logger } from "./transforms/log";
 import { _cstep, _mapper, _reducer, _transpose} from "./transforms/_mat";
 import { genId, vertex } from "./vertex";
 import { _memory } from "./transforms/_memory"

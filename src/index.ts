@@ -2,7 +2,7 @@ import * as _act from "./core/activations";
 import { apply_act } from "./core/apply_act";
 import { add, multiply, sub } from "./core/basic";
 import { genRan, _inc_val } from "./core/gen";
-import { logger } from "./core/log";
+import { logger } from "./core/transforms/log";
 import { matmul2d, transpose } from "./core/mat";
 import { _apply_fn } from "./core/transforms/_apply_fn";
 import { _add, _change_val, _multiply, _sub } from "./core/transforms/_basic";

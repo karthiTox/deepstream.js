@@ -2,7 +2,7 @@ import { Transform, TransformCallback, TransformOptions } from "stream";
 import { genId, vertex, _details } from "./vertex";
 import { _multiply } from "./transforms/_basic";
 import { _memory } from "./transforms/_memory";
-import { dataWriter } from "./log";
+import { dataWriter } from "./transforms/log";
 import { _apply_fn } from "./transforms/_apply_fn";
 
 export function apply_act(
