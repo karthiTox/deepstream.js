@@ -1,137 +1,151 @@
 import { Readable, Stream, Transform, TransformCallback, TransformOptions} from "stream"
 import { data } from "./data.interface";
-import { dataWriter } from "./log";
 import {_cindex, _cstep, _cstep_change, _findIndex} from "./utils"
+import { switcher } from "./_switcher";
 
-export interface _transpose_options{
-    shape:number[],
-    step:number[],
-    _step:number[],
-    output_id:number,
-}
-
-export class _transpose extends Transform{
-    constructor(
-        private transpose_options:_transpose_options,         
-        Transform_options:TransformOptions
-    ){
-        super(Transform_options);               
+export class Transposer extends Transform{
+    constructor(){
+        super({objectMode:true, highWaterMark:1});               
     }
 
-    _transform(data:any, e:BufferEncoding, next:TransformCallback){        
-        const shape = this.transpose_options.shape;
-        const step = this.transpose_options.step;
+    _transform(data:data, e:BufferEncoding, next:TransformCallback){  
+        data = JSON.parse(JSON.stringify(data))      
+        const shape = data.shape;
+        const step = _cstep(data.shape);
+        const op_shape = JSON.parse(JSON.stringify(data.shape)).reverse();
         
-        let index = _findIndex(shape, step, data[0])        
-        let res = _cindex(index.reverse(), this.transpose_options._step);
+        let index = _findIndex(shape, step, data.index)        
+        let res = _cindex( index.reverse(), _cstep(op_shape) );
     
-        this.push([res, data[1], this.transpose_options.output_id, data[3]]);
+        data.index = res;
+        data.shape = op_shape;
+
+        this.push(JSON.parse(JSON.stringify(data)));
         next();
     }
 }
 
-
-interface _inputs{
-    [input_id:number]:{
-        place:number;
-        shape:number[];
-        step:number[];
-    }
+export function transpose(a:Readable|Transform){
+    const transposer = new Transposer();
+    a.pipe(transposer);
+    return transposer;
 }
 
-interface _output{   
-    shape:number[];
-    step:number[];
-}
-
-export interface _mapper_options{
-    i:number, 
-    j:number, 
-    k:number, 
-    inputs:_inputs,
-    output:_output,
-}
-
-export class _mapper extends Transform{
+export class Mapper extends Transform{
     private i:number|null = null; 
-    private i:number|null = null; 
-    private i:number|null = null; 
+    private j:number|null = null; 
+    private k:number|null = null; 
 
+    private waitings:{[id:number]:data[]} = {}
     constructor(
         private fid:number,
         private sid:number
     ){
         super({objectMode:true, highWaterMark:1});
+        this.waitings[fid] = [];
+        this.waitings[sid] = [];
     }
 
-    _transform(data:data, e:BufferEncoding, next:TransformCallback){                        
-        // finding index
-        const _shape = data.shape;
-        const _step = _cstep(data.shape);
-        let index = _findIndex(_shape, _step, data.index);            
+    _transform(data:data, e:BufferEncoding, next:TransformCallback){ 
+        data = JSON.parse(JSON.stringify(data))
+        // console.log(data)
 
-        // mapping respectively
-        if(data.id == this.fid){
-            let i = index[0];
-            let j = index[1];
+        
+        // finding i, j, k, output_shape
+        if(!this.i || !this.j || !this.k){
+            if(data.id == this.fid){
+                this.i = data.shape[0];
+                this.j = data.shape[1];
+            }
+            else if(data.id == this.sid){                
+                this.k = data.shape[1];
+            }
+        }
+        
+        // update waiting
+        if(!this.i || !this.j|| !this.k){                        
+            this.waitings[data.id].push(data);
+            return next();            
+        }
+
+        if(this.i && this.j && this.k){
+            this.push_results(data);
             
-            for(let k = 0; k < this.mapper_options.k; k++){
-                this.push(
-                    [
-                        c[3], _cindex([i, k], this.mapper_options.output.step),                        
-                        c[1], j
-                    ]
-                )            
+            if(this.waitings[this.fid].length > 0 || this.waitings[this.sid].length > 0){
+                this.waitings[this.fid].forEach(d => this.push_results(d))
+                this.waitings[this.sid].forEach(d => this.push_results(d))
+                this.waitings[this.fid].length = 0;
+                this.waitings[this.sid].length = 0;
             }
-        }
-
-        else if(data.id == this.sid){
-            let j = index[0];
-            let k = index[1];
-
-            for(let i = 0; i < this.mapper_options.i; i++){                
-                this.push(
-                    [
-                        c[3], _cindex([i, k], this.mapper_options.output.step),                                                 
-                        c[1], j
-                    ]
-                )            
-            }
-        }
+        }                      
+        
 
         next();
     }
-}
 
-
-
-interface _waitings {
-    [index:string]:{
-        tot:number;
-        count:number;
-        values:{
-            [j:number]:number[]
-        };
+    push_results(data:data){
+        if(this.i && this.j && this.k){
+            // finding index
+            const _shape = data.shape;
+            const _step = _cstep(data.shape);
+            let index = _findIndex(_shape, _step, data.index);            
+    
+            // mapping respectively
+            const op_shape = [this.i, this.k];
+            const op_step = _cstep(op_shape);
+            if(data.id == this.fid){
+                let i = index[0];
+                let j = index[1];
+                
+                for(let k = 0; k < this.k; k++){
+                    const push:any = Object.assign({}, data);
+                    push.index = _cindex([i, k], op_step);
+                    push.shape = op_shape;
+                    push.j = j;                                        
+                    push.tot_j = this.j;                                        
+                    
+                    this.push(JSON.parse(JSON.stringify(push)));            
+                }
+            }
+    
+            else if(data.id == this.sid){
+                let j = index[0];
+                let k = index[1];
+    
+                for(let i = 0; i < this.i; i++){                
+                    const push:any = Object.assign({}, data);
+                    push.index = _cindex([i, k], op_step);
+                    push.shape = op_shape;
+                    push.j = j;                                        
+                    push.tot_j = this.j;                                        
+                    
+                    this.push(JSON.parse(JSON.stringify(push)));          
+                }
+            }
+        }
     }
 }
 
-export interface _reducer_options{
-    i:number;
-    j:number; 
-    k:number;
-    output_id:number;
-}
 
-export class _reducer extends Transform{
-    private waitings:_waitings = {};
+export class Reducer extends Transform{
+    private waitings:{
+        [index:string]:{
+            tot:number;
+            count:number;
+            values:{
+                [j:number]:number
+            };
+        }
+    } = {};
     constructor(        
-        private reducer_options:_reducer_options, 
-        tansform_options:TransformOptions){
-        super(tansform_options);        
+
+    ){
+        super({objectMode:true, highWaterMark:1});        
     }
 
     _transform(data:any, e:BufferEncoding, next:TransformCallback){ 
-        const index = JSON.stringify(data[1]) + JSON.stringify(data[0])                           
+        data = JSON.parse(JSON.stringify(data))
+        const index = JSON.stringify(data.iteration) + JSON.stringify(data.index)                           
         
         // initalizing
         if(!(index in this.waitings)){
@@ -141,20 +155,34 @@ export class _reducer extends Transform{
         const waiting = this.waitings[index];
         
         // reducing
-        if(data[3] in waiting.values){                
-            waiting.tot += waiting.values[data[3]][2] * data[2];
+        if(data.j in waiting.values){                
+            waiting.tot += waiting.values[data.j] * data.value;
             waiting.count++;                                  
-            delete this.waitings[index].values[data[3]]
+            delete this.waitings[index].values[data.j]
         }else{            
-            waiting.values[data[3]] = data;
+            waiting.values[data.j] = data.value;
         }            
 
         // push the res to readable stream
-        if(waiting.count == this.reducer_options.j){            
-            this.push([data[1], waiting.tot, this.reducer_options.output_id, data[0]])  
+        if(waiting.count == data.tot_j){            
+            this.push(<data>JSON.parse(JSON.stringify({
+                id:0,
+                index:data.index, 
+                iteration:data.iteration,
+                value:waiting.tot, 
+                shape:data.shape, 
+            })))  
             delete this.waitings[index]                                        
         }         
 
-        next()
+        next();
     }
+}
+
+export function matmul(a:Readable|Transform, aid:number, b:Readable|Transform, bid:number){
+    const mapper = new Mapper(aid, bid);
+    const reducer = new Reducer();
+    const switched = switcher(a, aid, b, bid);
+    switched.pipe(mapper).pipe(reducer);
+    return reducer;
 }

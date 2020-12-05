@@ -1,5 +1,4 @@
 import { Readable, Transform, TransformCallback, TransformOptions } from "stream";
-import { _details } from "../vertex";
 import { data } from "./data.interface";
 
 export class Applyfn extends Transform{
