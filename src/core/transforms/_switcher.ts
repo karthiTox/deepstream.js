@@ -1,36 +1,50 @@
-import { Readable, Transform, TransformCallback } from "stream";
+import { PassThrough, Readable, Transform, TransformCallback } from "stream";
 import { data } from "./data.interface";
 
-export class Switcher extends Transform{
+export class Switcher extends PassThrough{
     constructor(
-        private FirstStream:Readable|Transform, 
-        private fid:number, 
-        private SecondStream:Readable|Transform, 
-        private sid:number){
-        super({objectMode:true, highWaterMark:1});        
+        private FirstStream:Readable|Transform,
+        private SecondStream:Readable|Transform,
+    ){
+        super({objectMode:true, highWaterMark:3});  
+        this.init_stream()
+        this.on("drain", ()=>{
+            this.FirstStream.resume();
+            this.SecondStream.resume();
+        })          
     }
 
-    _transform(data:data, en:BufferEncoding, next:TransformCallback){
-        if(data.id == this.fid){
+    init_stream(){
+        this.FirstStream.on("data", (data:data)=>{            
             this.FirstStream.pause();
             this.SecondStream.resume();
-        }else if(data.id == this.sid){            
+            
+            const isSuccess = this.write(data);                    
+            
+            if(!isSuccess){
+                this.SecondStream.pause();   
+                
+                
+            }
+
+        })
+
+        this.SecondStream.on("data", (data:data)=>{            
             this.SecondStream.pause();
-            this.FirstStream.resume();
-        }else{
-            this.FirstStream.resume();
-            this.SecondStream.resume();
-        }
-        this.push(data);
-        next()
+            this.FirstStream.resume();  
+            
+            const isSuccess = this.write(data);
+            
+            if(!isSuccess){
+                this.FirstStream.pause();
+            }            
+        })
+        
     }
 
 }
 
 export function switcher(a:Readable|Transform, aid:number, b:Readable|Transform, bid:number){
-    const switcher = new Switcher(a, aid, b, bid);
-    a.pipe(switcher, {end:false});
-    b.pipe(switcher, {end:false});
-
+    const switcher = new Switcher(a, b);    
     return switcher;
 }

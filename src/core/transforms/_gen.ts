@@ -37,11 +37,12 @@ export class GenVals extends Readable{
     
     private it = 0;
     private iteration = 0;
-
-    constructor(private value:any, private shape:number[], iteration?:number, private id?:number){
+               
+    constructor(private value:any[], private shape:number[], iteration?:number, private id?:number){
         super({objectMode:true, highWaterMark:1}); 
         this.total = shape.reduce((a,b)=>a*b);
-        this.iteration = iteration ? iteration : this.iteration;       
+        this.iteration = iteration ? iteration : this.iteration;  
+                
     }
 
     _read(){
@@ -50,7 +51,7 @@ export class GenVals extends Readable{
                 id:this.id?this.id:0,
                 index:this.i,
                 iteration:this.it,
-                value:this.value,
+                value:this.value[this.i%this.value.length],
                 shape:this.shape,
             });
 
@@ -66,6 +67,6 @@ export class GenVals extends Readable{
     }
 }
 
-export function genVals(value:number, shape:number[], iteration:number = 1, id?:number){
+export function genVals(value:number[], shape:number[], iteration:number = 1, id?:number){
     return new GenVals(value, shape, iteration, id);
 }

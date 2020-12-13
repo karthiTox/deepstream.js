@@ -5,7 +5,9 @@
   "main": "dist/deepstream.js",
   "scripts": {
     "test": "jest",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "build-ts": "tsc src/core/transforms/test.ts --outDir dist_ts/ && node dist_ts/transforms/test.js",
+    "build-ts-dense": "tsc src/core/transforms/dense.ts --outDir dist_ts/ && node dist_ts/transforms/dense.js"
   },
   "repository": {
     "type": "git",
@@ -34,5 +36,8 @@
     "rollup-plugin-terser": "^7.0.2",
     "ts-jest": "^26.4.1",
     "ts-loader": "^8.0.5"
+  },
+  "dependencies": {
+    "graceful-fs": "^4.2.4"
   }
 }

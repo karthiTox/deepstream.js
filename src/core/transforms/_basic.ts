@@ -13,12 +13,14 @@ export class Adder extends Transform{
     }
 
     _transform(data:data, en:BufferEncoding, next:TransformCallback){
+        data = JSON.parse(JSON.stringify(data))
+
         const index = JSON.stringify(data.index)+JSON.stringify(data.iteration);
 
         if(index in this.waitings){
             const res = this.waitings[index] + data.value;
             data.value = res;
-            this.push(data);
+            this.push(JSON.parse(JSON.stringify(data)));
             delete this.waitings[index];
         }else{
     
@@ -51,15 +53,16 @@ export class Multiplier extends Transform{
     }
 
     _transform(data:data, en:BufferEncoding, next:TransformCallback){
+        data = JSON.parse(JSON.stringify(data))
+
         const index = JSON.stringify(data.index)+JSON.stringify(data.iteration);
 
         if(index in this.waitings){
             const res = this.waitings[index] * data.value;
             data.value = res;
-            this.push(data);
+            this.push(JSON.parse(JSON.stringify(data)));
             delete this.waitings[index];
         }else{
-    
             this.waitings[index] = data.value;
         }
         

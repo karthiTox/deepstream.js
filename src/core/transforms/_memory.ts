@@ -2,66 +2,96 @@ import {
     Transform, 
     Readable, 
     Writable, 
-    WritableOptions, 
-    ReadableOptions, 
-    TransformOptions, 
-    TransformCallback, 
+    TransformCallback,
+    PassThrough, 
 } from "stream";
-import { dataWriter } from "./log";
 
-export class _memory{
-    private in_;
-    private out_;
-    private middle_;
-    
-    /**
-     * Warning:- this creates more readable streams when you set 'highWaterMark' less than 10.     
-     */
-    constructor(
-        private name:string,
-        writableOptions:WritableOptions = {objectMode:true}, 
-        private readableOption:ReadableOptions = {objectMode:true}, 
-        outputTransformOptions:TransformOptions = {objectMode:true},
-    ){
-        this.in_ = new Writable(writableOptions);
-        
-        this.out_ = new Transform(outputTransformOptions);
-        this.out_._transform = (data:any, en:BufferEncoding, next:TransformCallback) => {
-            this.out_.push(data);
-            next();
+import * as fs from "graceful-fs";
+import { join } from "path";
+import { Changer, LineParser, LineStringify } from "./_transform_utils";
+import { data } from "./data.interface";
+import { create_writer, formatMemory, logger } from "./log";
+import { _cstep, _findIndex, _cindex } from "./utils";
+
+export class Memory{
+    public inline = new Writable({objectMode:true, highWaterMark:1});
+    public outline = new PassThrough({objectMode:true, highWaterMark:1});
+    private bucket = this.create_bucket();
+
+    constructor(private threshold:number = 5){
+        if(!fs.existsSync(join(__dirname, "/temp_pool"))){
+            fs.mkdirSync(join(__dirname, "/temp_pool"))
         }
+        
+        this.inline._write = (data:any, en:BufferEncoding, next:TransformCallback)=>{
+            const isPushed = this.bucket.push(data);
 
-        this.middle_ = this.create_container()
-        this.middle_.pipe(this.out_)
+            if(!isPushed){
+                this.bucket.unpipe();
+                let name = this.get_name()
+                
+                let writer = fs.createWriteStream(name, {highWaterMark:10});
+                this.bucket.pipe(new LineStringify()).pipe(writer);
+                this.bucket.push(null);
+                
+                writer.on("close", ()=>{
+                    let reader = fs.createReadStream(name, {highWaterMark:10});
+                    reader.pipe(new LineParser()).pipe(this.outline, {end:false});
+                    reader.on("close", ()=>{
+                        fs.unlinkSync(name);
+                    })
+                })
 
-        // this.count = 1;
-        this.in_._write = (data:any, en:BufferEncoding, next:TransformCallback) => {
-            const res = this.middle_.push(data);
-            // dataWriter.write("total "+this.count+" data pushed " + name)                         
-            // this.count++
-            if(res == false){      
-                // dataWriter.write("loaded new container " + name)
-                // this.count = 0;                         
-                this.middle_ = this.create_container()
-                this.middle_.pipe(this.out_)
-                this.middle_.push(data)
+                this.bucket =  this.create_bucket();
             }
 
-            next()
+            next();
         }
     }
 
-    create_container():Readable{
-        const container = new Readable(this.readableOption); 
-        container._read = ()=>{}       
-        return container;
+    get_name(){
+        return join(__dirname, "/temp_pool/temp"+Math.random()+".txt");
     }
 
-    get_input_line():Writable{
-        return this.in_;
+    create_bucket(){
+        let bucket = new Readable({objectMode:true, highWaterMark:this.threshold, read(){}});
+        bucket.pipe(this.outline, {end:false});
+        return bucket;
+    }
+    
+}
+
+
+export class OneShotMemory{
+    private name:string;
+    
+    public inline:fs.WriteStream;
+
+    constructor(){
+        if(!fs.existsSync(join(__dirname, "/temp_pool"))){
+            fs.mkdirSync(join(__dirname, "/temp_pool"))
+        }
+
+        this.name = this.get_name();
+        this.inline = fs.createWriteStream(this.name, {highWaterMark:10}); 
     }
 
-    get_output_line():Transform{
-        return this.out_;
+    get_name(){
+        return join(__dirname, "/temp_pool/temp"+Math.random()+".txt");
+    }
+
+    get_outline(){   
+        this.inline.close();
+
+        const parser = new LineParser();
+        const reader = fs.createReadStream(this.name, {highWaterMark:10});      
+        reader.pipe(parser);  
+        reader.on("close", ()=>{
+            fs.unlinkSync(this.name)            
+        })
+
+        return parser;
     }
 }
+
+

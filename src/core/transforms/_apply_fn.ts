@@ -10,8 +10,9 @@ export class Applyfn extends Transform{
     }
 
     _transform(data:data, en:BufferEncoding, next:TransformCallback){        
+        data = JSON.parse(JSON.stringify(data))
         data.value = this.fn(data.value) as number;    
-        this.push(data);                    
+        this.push(JSON.parse(JSON.stringify(data)));                    
         next();       
     }
 }
