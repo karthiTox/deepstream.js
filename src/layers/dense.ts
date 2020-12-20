@@ -24,6 +24,7 @@ export class Dense{
     
     private memory = {
         a:new Memory(),
+        ib:new Memory(),
         added:new Memory(),
 
         w:new Memory(),// w
@@ -48,9 +49,10 @@ export class Dense{
         a.pipe(this.memory.a.inline);
 
         const wt = transpose(this.w);
+        wt.pipe(this.memory.ib.inline)
         const mat = matmul(
             changeId(a, 0), 0,
-            changeId(wt, 1), 1
+            changeId(wt, 1), 1,
         );
 
         const added = add(
@@ -69,12 +71,12 @@ export class Dense{
         const ad = multiply(changeId(grad, 0), 0, changeId(rp, 1), 1);                
 
         const gradb = sub(changeId(this.memory.b.outline, 0), 0, changeId(mulwith(ad, this.lr), 1), 1);
-        
+
         const inter = changeId(transpose(this.memory.a.outline), 0)
         const md = matmul(inter, 0, changeId(ad, 1), 1);      
         const gradw = sub(changeId(this.memory.w.outline, 0), 0, changeId(mulwith(md, this.lr), 1), 1);           
         
-        const grada = matmul(changeId(ad, 0), 0, changeId(transpose(this.memory.w.outline), 1), 1);  
+        const grada = matmul(changeId(ad, 0), 0, changeId(transpose(this.memory.ib.outline), 1), 1);  
 
         const inc = () => new Transform({objectMode:true, highWaterMark:2, transform(data, e, next){            
             data.iteration += 1;

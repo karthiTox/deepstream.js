@@ -6,21 +6,21 @@ import { logger } from "../core/transforms/log";
 const model = serial();
 
 model.add(dense({
-    prev_neurons:4,
-    neurons:4,
+    prev_neurons:100,
+    neurons:5,
     activation:"sig",
     learningRate:0.04
 }))
 
 model.add(dense({
-    prev_neurons:4,
-    neurons:4,
+    prev_neurons:5,
+    neurons:2,
     activation:"sig",
     learningRate:0.04
 }))
 
-const input = genValues([1], [1, 4], 2);
-const output = genValues([1], [1, 4], 2);
+const input = genValues([1], [1, 100], 10);
+const output = genValues([1], [1, 2], 2);
 
 model.build(input, output);
 
