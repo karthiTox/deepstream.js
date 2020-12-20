@@ -22,13 +22,13 @@ export function logger(msg:string, log:boolean = true, logAt?:number){
             if(log){
                 if(logAt){
                     if(data.iteration%logAt == 0){
-                        writter.write(data.iteration +","+ formatMemory(process.memoryUsage().heapUsed) + ",\n")                    
+                        writter.write(data.index +","+ formatMemory(process.memoryUsage().heapUsed) + ",\n")                    
                         console.log(formatMemory(process.memoryUsage().heapUsed));  
                         console.log(message, JSON.stringify(data))
                     }                  
                 }
                 else{
-                    writter.write(data.iteration +","+ formatMemory(process.memoryUsage().heapUsed) + ",\n")
+                    writter.write(data.index +","+ formatMemory(process.memoryUsage().heapUsed) + ",\n")
                     // writter.write(formatMemory(process.memoryUsage().heapUsed) + ",\n")
                     
                     console.log(formatMemory(process.memoryUsage().heapUsed));  

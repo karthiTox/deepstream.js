@@ -1,4 +1,4 @@
-import * as _act from "./core/activations";
+import * as _act from "./core/transforms/activations";
 import { apply_act } from "./core/apply_act";
 import { add, multiply, sub } from "./core/basic";
 import { genRan, _inc_val } from "./core/gen";

@@ -1,3 +1,5 @@
+import { count } from "console";
+import { EventEmitter } from "events";
 import { Readable, Stream, Transform, TransformCallback, TransformOptions} from "stream"
 import { data } from "./data.interface";
 
@@ -98,3 +100,43 @@ export class LineParser extends Transform{
         next();
     }
 }
+
+
+
+export class IterationCounter extends Transform{
+    constructor(){
+        super({objectMode:true, highWaterMark:1}); 
+        
+        // setInterval(() => {
+        //     this.counter_emitter.emit("finished")
+        // }, 10000);
+    }
+
+    public counter_emitter = new EventEmitter()
+    public counts:{
+        [key:number]:number
+    } = {}
+
+    public in:{[key:number]:boolean} = {}
+
+    _transform(data:data, e:BufferEncoding, next:TransformCallback){        
+        if(!(data.iteration in this.counts)){
+            this.counts[data.iteration] = 1;
+        }else{
+            this.counts[data.iteration] += 1;
+        }
+
+        this.in[data.index] = true;
+
+        if(this.counts[data.iteration] >= data.shape.reduce((a,b)=>a*b)){
+            this.counter_emitter.emit("finished");
+            delete this.counts[data.iteration];
+
+        }            
+
+        this.push(data);
+        next();
+    }
+}
+
+

@@ -18,7 +18,10 @@ export class Memory{
     public outline = new PassThrough({objectMode:true, highWaterMark:1});
     private bucket = this.create_bucket();
 
-    constructor(private threshold:number = 5){
+    private finished:string[] = [] 
+    private connected = false;
+
+    constructor(private threshold:number = 100){
         if(!fs.existsSync(join(__dirname, "/temp_pool"))){
             fs.mkdirSync(join(__dirname, "/temp_pool"))
         }
@@ -34,18 +37,33 @@ export class Memory{
                 this.bucket.pipe(new LineStringify()).pipe(writer);
                 this.bucket.push(null);
                 
-                writer.on("close", ()=>{
-                    let reader = fs.createReadStream(name, {highWaterMark:10});
-                    reader.pipe(new LineParser()).pipe(this.outline, {end:false});
-                    reader.on("close", ()=>{
-                        fs.unlinkSync(name);
-                    })
+                writer.once("finish", ()=>{                    
+                    this.finished.push(name);
+                    this.connect();
                 })
 
                 this.bucket =  this.create_bucket();
             }
 
             next();
+        }
+    }
+
+    connect(){
+        if(!this.connected){
+            const name = this.finished.shift();
+            if(name){
+                let reader = fs.createReadStream(name, {highWaterMark:10});
+                reader.pipe(new LineParser()).pipe(this.outline, {end:false});
+                this.connected = true
+                reader.once("end", ()=>{                    
+                    this.connected = false;                    
+                    fs.unlink(name, (err)=>{
+                        if(err) throw err;
+                    });
+                    this.connect()
+                })
+            }
         }
     }
 

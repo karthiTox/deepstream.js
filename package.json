@@ -7,7 +7,8 @@
     "test": "jest",
     "build": "rollup -c",
     "build-ts": "tsc src/core/transforms/test.ts --outDir dist_ts/ && node dist_ts/transforms/test.js",
-    "build-ts-dense": "tsc src/core/transforms/dense.ts --outDir dist_ts/ && node dist_ts/transforms/dense.js"
+    "build-ts-dense": "tsc src/core/transforms/dense.ts --outDir dist_ts/ && node dist_ts/transforms/dense.js",
+    "build-ts-densev2": "tsc src/core/transforms/denseV2.ts --outDir dist_ts/ && node dist_ts/transforms/denseV2.js"
   },
   "repository": {
     "type": "git",

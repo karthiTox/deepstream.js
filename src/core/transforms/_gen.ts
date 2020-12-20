@@ -31,6 +31,36 @@ export function genRan(shape:number[], id?:number){
 }
 
 
+export class GenValsClassic extends Readable{
+    private i = 0;
+    private total = 0;
+
+    constructor(private value:any[], private shape:number[], private setIt:number,private id?:number){
+        super({objectMode:true, highWaterMark:1}); 
+        this.total = shape.reduce((a,b)=>a*b);       
+    }
+
+    _read(){
+        if(this.i < this.total){
+            this.push({
+                id:this.id?this.id:0,
+                index:this.i,
+                iteration:this.setIt,
+                value:this.value[this.i%this.value.length],
+                shape:this.shape,
+            });
+
+            this.i += 1;
+        }else{
+            this.push(null);
+        }
+    }
+}
+
+export function GenValsNormal(value:number[], shape:number[], set_it:number = 1, id?:number){
+    return new GenValsClassic(value, shape, set_it, id);
+}
+
 export class GenVals extends Readable{
     private i = 0;
     private total = 0;
@@ -67,6 +97,6 @@ export class GenVals extends Readable{
     }
 }
 
-export function genVals(value:number[], shape:number[], iteration:number = 1, id?:number){
+export function genValues(value:number[], shape:number[], iteration:number = 1, id?:number){
     return new GenVals(value, shape, iteration, id);
 }

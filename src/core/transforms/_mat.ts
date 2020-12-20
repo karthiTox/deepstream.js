@@ -47,16 +47,21 @@ export class IndexFinder extends Transform{
     private waitings:{[id:number]:data[]} = {}
     constructor(
         private fid:number,
-        private sid:number
+        private sid:number,
+        private log:boolean,
     ){
         super({objectMode:true, highWaterMark:1});
         this.waitings[fid] = [];
         this.waitings[sid] = [];
+
+        process.on("beforeExit", ()=>{
+            if(this.log) console.log(this.i , this.j, this.k)
+        })
     }
 
     _transform(data:data, e:BufferEncoding, next:TransformCallback){ 
         data = JSON.parse(JSON.stringify(data))
-        // console.log(data)
+        if(this.log) console.log(JSON.stringify(data))
 
         
         // finding i, j, k, output_shape
@@ -287,8 +292,9 @@ export class BridgeV2{
             id:number;
             index:number;
             path:string;                
-            writer:fs.WriteStream;
+            writer:fs.WriteStream|Writable;
             count:number;
+            used:number;
         }
     } = {}
 
@@ -317,17 +323,17 @@ export class BridgeV2{
     };
 
     private pather = new PassThrough({ objectMode:true, highWaterMark:1 });
-    private wr = create_writer("test")
+
     constructor(
         private from:Transform, 
         private to:Transform|Writable, 
         private fid:number, 
-        private sid:number
+        private sid:number,
+        private log:boolean,
     ){
-
         if(!fs.existsSync(join(__dirname, "/temp_pool"))) fs.mkdirSync(join(__dirname, "/temp_pool")) 
         
-        this.pather.on("data", (data:any) =>{             
+        this.pather.on("data", (data:any) =>{       
             const isfirst = data.id == this.fid ? true : false            
             const [row, col] = _findIndex(data.shape, _cstep(data.shape), data.index);             
 
@@ -338,10 +344,13 @@ export class BridgeV2{
                     id:data.id,
                     index: isfirst ? row : col,
                     count:0,
+                    used:0,
                     path:path,
                     writer:this.create_writter(path),
                 }
-
+                this.writers[key].writer.on("error", (err)=>{
+                    console.log(data, this.log);
+                })
             }  
 
             this.i = data.tot_i;
@@ -349,33 +358,46 @@ export class BridgeV2{
 
             const writer = this.writers[key];
 
-            const isSuccess = writer.writer.write(JSON.stringify(data) + "\n");
-            this.wr.write(isSuccess + ",\n")
+            const isSuccess = writer.writer.write(JSON.stringify(data) + "\n");                       
             writer.count += 1;
-            if(!isSuccess){ 
-                if(!this.pather.isPaused()) this.pather.pause();                               
+            if(!isSuccess){
+                this.pather.pause();
                 this.check(1000);
             }
-            
-            
-            if(writer.count == data.tot_j){                          
+
+            if(writer.count >= data.tot_j){                          
                 writer.writer.end();
                 writer.count = 0;
                 // console.log(formatMemory(process.memoryUsage().heapUsed), "MB")
                              
-                writer.writer.once("finish", ()=>{
+                writer.writer.once("finish", ()=>{                    
                     if(isfirst){
                         for(let c = 0; c < data.tot_k; c++){
                             const bkey = "" + data.iteration + this.sid + c;
                             if(bkey in this.writers && this.writers[bkey].writer.writableFinished){
-                                const block_key = "" + data.iteration + this.writers[key].index + this.writers[bkey].index
+                                const block_key = "" + data.iteration +"_"+ this.writers[key].index +"_"+ this.writers[bkey].index
+                                const prev_key = "" + (data.iteration<=0?data.iteration:data.iteration-1) +"_"+ this.writers[key].index +"_"+ this.writers[bkey].index
+                                
                                 if(!(block_key in this.placed)){
                                     this.blocks.push({
                                         index:[this.writers[key].index, this.writers[bkey].index],
                                         pathA:this.writers[key].path,
                                         pathB:this.writers[bkey].path
-                                    })                                      
+                                    })      
+
+                                    // if(this.log) console.log([this.writers[key].index, this.writers[bkey].index])
+
+                                    this.writers[key].used += 1;
+                                    this.writers[bkey].used += 1;
                                     this.placed[block_key] = true;
+                                    
+                                    if(data.iteration > 0){
+                                        delete this.placed[prev_key];
+                                        if(this.writers[key].used >= this.k)
+                                            delete this.writers[key];       
+                                        if(this.writers[bkey].used >= this.i)
+                                            delete this.writers[bkey];                                    
+                                    }
                                 }
                             }
                         }
@@ -383,7 +405,9 @@ export class BridgeV2{
                         for(let r = 0; r < data.tot_i; r++){
                             const akey = "" + data.iteration + this.fid + r;
                             if(akey in this.writers && this.writers[akey].writer.writableFinished){
-                                const block_key = "" + data.iteration + this.writers[akey].index + this.writers[key].index
+                                const block_key = "" + data.iteration +"_"+ this.writers[akey].index +"_"+ this.writers[key].index
+                                const prev_key = "" + (data.iteration<=0?data.iteration:data.iteration-1) +"_"+ this.writers[akey].index +"_"+ this.writers[key].index
+                                
                                 if(!(block_key in this.placed)){
                                     this.blocks.push({
                                         index:[this.writers[akey].index, this.writers[key].index],
@@ -391,7 +415,19 @@ export class BridgeV2{
                                         pathB:this.writers[key].path
                                     })
                                     
+                                    // if(this.log) console.log([this.writers[akey].index, this.writers[key].index])
+
+                                    this.writers[key].used += 1;
+                                    this.writers[akey].used += 1;
                                     this.placed[block_key] = true;
+                                    
+                                    if(data.iteration > 0){
+                                        delete this.placed[prev_key];
+                                        if(this.writers[akey].used >= this.k)
+                                            delete this.writers[akey];
+                                        if(this.writers[key].used >= this.i)
+                                            delete this.writers[key];
+                                    }       
                                 }
                             }
                         }
@@ -404,7 +440,7 @@ export class BridgeV2{
                         
         })
         
-        this.from.pipe(this.pather);         
+        this.from.pipe(this.pather);       
     }
 
     private isCheckeractive = false;
@@ -433,11 +469,8 @@ export class BridgeV2{
             const block = this.blocks.shift();
             if(!block) return;            
 
-            // console.log(block)
-            const readerA = fs.createReadStream(block.pathA, {highWaterMark:100, autoClose:true});
-            // readerA.on("error", (er)=>{console.log("At matmul A", er)})
-            const readerB = fs.createReadStream(block.pathB, {highWaterMark:100, autoClose:true});            
-            // readerB.on("error", (er)=>{console.log("At matmul B")})
+            const readerA = fs.createReadStream(block.pathA, {highWaterMark:100});            
+            const readerB = fs.createReadStream(block.pathB, {highWaterMark:100});                        
             this.setPath(block.pathA, 0);
             this.setPath(block.pathB, 1);
             this.connected1 = true;
@@ -462,51 +495,46 @@ export class BridgeV2{
             const lineParserB = new LineParser();
             readerA.pipe(lineParserA).pipe(changeIndexA).pipe(this.to, {end:false});
             readerB.pipe(lineParserB).pipe(changeIndexB).pipe(this.to, {end:false});
-
-            readerA.once("end", ()=>{
-                changeIndexA.unpipe();                
-                lineParserA.unpipe(); 
-                readerA.unpipe(); 
-                changeIndexA.destroy();                
-                lineParserA.destroy(); 
-                readerA.destroy();               
-
-                if(this.pathed.a[block.pathA] >= this.k){
-                    fs.unlink(block.pathA, (err) => {
-                        if(err) throw err;
-                    })
-                }
-
+            if(this.log) console.log(this.i, this.k);
+            readerA.once("end", ()=>{    
                 this.connected1 = false;
                 this.connect();
-            })
+            })            
             readerB.once("end", ()=>{
-                changeIndexB.unpipe();  
-                lineParserB.unpipe();
-                readerB.unpipe() ;
-                changeIndexB.destroy();  
-                lineParserB.destroy();
-                readerB.destroy() 
-
-                if(this.pathed.b[block.pathB] >= this.i){
-                    fs.unlink(block.pathB, (err) => {
-                        if(err) throw err;
-                    })
-                }
-
                 this.connected2 = false;                
                 this.connect();
             })
+
+            readerA.once("close", ()=>{                
+                if(this.pathed.a[block.pathA] >= this.k){
+                    fs.unlink(block.pathA, (err) => {
+                        if(err) throw err;
+
+                        delete this.pathed.a[block.pathA];
+                    })
+                }
+            })
+            readerB.once("close", ()=>{                
+                if(this.pathed.b[block.pathB] >= this.i){
+                    fs.unlink(block.pathB, (err) => {
+                        if(err) throw err;
+                        
+                        delete this.pathed.b[block.pathB];
+                    })
+                }
+            })
+
         }
     }
 
     create_writter(name:string){                
         const writer = fs.createWriteStream(name, {highWaterMark:1000});        
         const ls = new LineStringify();               
+        // const mem = new Memory();
         ls.pipe(writer);
-        writer.on('drain', ()=>{
+        writer.on("drain", ()=>{
             if(this.pather.isPaused()) this.pather.resume();
-        })
+        })         
         return writer;
     }
 
@@ -528,12 +556,16 @@ export class Reducer extends Transform{
         }
     } = {};
 
-    constructor(){
-        super({objectMode:true, highWaterMark:1});        
+    constructor(private log:boolean){
+        super({objectMode:true, highWaterMark:1});
+        
     }
 
-    _transform(data:any, e:BufferEncoding, next:TransformCallback){        
+    _transform(data:any, e:BufferEncoding, next:TransformCallback){ 
+        if(this.log) console.log("==>", JSON.stringify(data));
+               
         data = JSON.parse(JSON.stringify(data))
+        // console.log(data.iteration, data.index)
         const index = JSON.stringify(data.iteration) + JSON.stringify(data.index)                           
         
         // initalizing
@@ -569,12 +601,14 @@ export class Reducer extends Transform{
     }
 }
 
-export function matmul(a:Readable|Transform, aid:number, b:Readable|Transform, bid:number){
-    const mapper = new IndexFinder(aid, bid);
-    const reducer = new Reducer();
-    const switched = switcher(a, aid, b, bid);
-    switched.pipe(mapper);    
-    const bridge = new BridgeV2(mapper, reducer, aid, bid);
+export function matmul(a:Readable|Transform, aid:number, b:Readable|Transform, bid:number, log = false){
+    const mapper = new IndexFinder(aid, bid, log);
+    const reducer = new Reducer(false);
+    const switched = switcher(a, aid, b, bid); 
+    switched.pipe(mapper);
+    // a.pipe(mapper, {end:false});
+    // b.pipe(mapper, {end:false});
+    const bridge = new BridgeV2(mapper, reducer, aid, bid, log);
     return reducer;
     
     // const mapper = new Mapper(aid, bid);
