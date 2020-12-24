@@ -3,8 +3,6 @@ import * as fs from "graceful-fs"
 import { data } from "./data.interface";
 import {_cindex, _cstep, _cstep_change, _findIndex} from "./utils"
 import { switcher } from "./_switcher";
-import { create_writer, formatMemory } from "./log";
-import { Memory, OneShotMemory } from "./_memory";
 import { memory } from "console";
 import { LineParser, LineStringify } from "./_transform_utils";
 import { join } from "path";
@@ -53,10 +51,6 @@ export class IndexFinder extends Transform{
         super({objectMode:true, highWaterMark:1});
         this.waitings[fid] = [];
         this.waitings[sid] = [];
-
-        process.on("beforeExit", ()=>{
-            if(this.log) console.log(this.i , this.j, this.k)
-        })
     }
 
     _transform(data:data, e:BufferEncoding, next:TransformCallback){ 
@@ -495,17 +489,19 @@ export class BridgeV2{
             const lineParserB = new LineParser();
             readerA.pipe(lineParserA).pipe(changeIndexA).pipe(this.to, {end:false});
             readerB.pipe(lineParserB).pipe(changeIndexB).pipe(this.to, {end:false});
+            
             if(this.log) console.log(this.i, this.k);
-            readerA.once("end", ()=>{    
+            
+            readerA.once("end", ()=>{  
+                readerA.unpipe();
+                lineParserA.unpipe();
+                changeIndexA.unpipe();
+                readerA.destroy();
+                lineParserA.destroy();
+                changeIndexA.destroy();
+                
                 this.connected1 = false;
-                this.connect();
-            })            
-            readerB.once("end", ()=>{
-                this.connected2 = false;                
-                this.connect();
-            })
 
-            readerA.once("close", ()=>{                
                 if(this.pathed.a[block.pathA] >= this.k){
                     fs.unlink(block.pathA, (err) => {
                         if(err) throw err;
@@ -513,8 +509,19 @@ export class BridgeV2{
                         delete this.pathed.a[block.pathA];
                     })
                 }
-            })
-            readerB.once("close", ()=>{                
+
+                this.connect();
+            })            
+            readerB.once("end", ()=>{
+                readerB.unpipe();
+                lineParserB.unpipe();
+                changeIndexB.unpipe();
+                readerB.destroy();
+                lineParserB.destroy();
+                changeIndexB.destroy();
+
+                this.connected2 = false;
+
                 if(this.pathed.b[block.pathB] >= this.i){
                     fs.unlink(block.pathB, (err) => {
                         if(err) throw err;
@@ -522,6 +529,8 @@ export class BridgeV2{
                         delete this.pathed.b[block.pathB];
                     })
                 }
+                
+                this.connect();
             })
 
         }

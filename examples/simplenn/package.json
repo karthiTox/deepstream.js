@@ -1,15 +1,14 @@
 {
-  "name": "math_operations",
+  "name": "simplenn",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "deepsteam.js": "^1.0.0"
+    "deepstream.js": "^1.0.0"
   }
 }

@@ -2,6 +2,7 @@ src/
 examples/
 node_modules/
 tests/
+dsboard/
 
 .babelrc
 .gitignore

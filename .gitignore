@@ -3,3 +3,4 @@ dist/
 tests/
 
 dist_ts/
+tsconfig_test.txt/

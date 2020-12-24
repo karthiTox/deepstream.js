@@ -88,7 +88,7 @@ export class GenVals extends Readable{
             if(this.i < this.total-1)
                 this.i += 1;
             else{
-                this.i = 0;
+                this.i = 0;                
                 this.it += 1;
             }
         }else{

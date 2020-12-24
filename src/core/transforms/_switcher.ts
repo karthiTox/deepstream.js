@@ -12,8 +12,8 @@ export class Switcher extends PassThrough{
         private FirstStream:Readable|Transform,
         private SecondStream:Readable|Transform,
     ){
-        super({objectMode:true, highWaterMark:3});
-        this.init_stream()
+        super({objectMode:true, highWaterMark:1});
+        this.init_stream()         
     }
 
     init_stream(){
@@ -76,7 +76,7 @@ export class Switcher extends PassThrough{
     }
 
     pause_fs(data:data){
-        this.FirstStream.pause();
+        this.FirstStream.pause(); 
         this.SecondStream.resume();
         
         const isSuccess = this.write(data);                    
@@ -106,13 +106,14 @@ export class Switcher extends PassThrough{
     }
 }
 
-class Switcher_old extends PassThrough{
+
+export class Col extends PassThrough{   
     constructor(
         private FirstStream:Readable|Transform,
         private SecondStream:Readable|Transform,
     ){
-        super({objectMode:true, highWaterMark:5});  
-        this.init_stream()                 
+        super({objectMode:true, highWaterMark:2});
+        this.init_stream()         
     }
 
     init_stream(){
@@ -123,14 +124,15 @@ class Switcher_old extends PassThrough{
             this.pause_fs(data);
         })
 
-        this.SecondStream.on("data", (data:data)=>{      
-            this.pause_ss(data);           
+        this.SecondStream.on("data", (data:data)=>{   
+            this.pause_ss(data);
         })
         
     }
 
+    
     pause_fs(data:data){
-        this.FirstStream.pause();
+        this.FirstStream.pause(); 
         this.SecondStream.resume();
         
         const isSuccess = this.write(data);                    
@@ -161,15 +163,31 @@ class Switcher_old extends PassThrough{
 }
 
 export function switcher(a:Readable|Transform, aid:number, b:Readable|Transform, bid:number){
-    // const switcher = new Switcher(a, b);
-    // return switcher;
+    const switcher = new Switcher(a, b);
+    return switcher;
+    
 
-    const passer = new PassThrough({objectMode:true, highWaterMark:3});
-    a.once("readable", ()=>{
-        a.pipe(passer, {end:false});
-        b.pipe(passer, {end:false});
-    })
-    return passer
+    // const passer = new PassThrough({objectMode:true, highWaterMark:3});
+
+    // let piped = false;
+
+    // a.once("readable", ()=>{                               
+    //     if(b.readable && !piped){
+    //         a.pipe(passer, {end:false});
+    //         b.pipe(passer, {end:false});            
+    //         piped = true;
+    //     }
+    // })
+
+    // b.once("readable", ()=>{                               
+    //     if(a.readable && !piped){
+    //         a.pipe(passer, {end:false});
+    //         b.pipe(passer, {end:false}); 
+    //         piped = true;           
+    //     }
+    // })
+
+    // return passer
 
     // const delayA = new Memory();
     // const delayB = new Memory();

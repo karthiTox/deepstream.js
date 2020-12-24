@@ -1,5 +1,5 @@
 {
-  "name": "deepsteam.js",
+  "name": "deepstream.js",
   "version": "1.0.0",
   "description": "Train your neural network using streams",
   "main": "dist/deepstream.js",
@@ -7,8 +7,8 @@
     "test": "jest",
     "build": "rollup -c",
     "build-ts": "tsc src/core/transforms/test.ts --outDir dist_ts/ && node dist_ts/transforms/test.js",
-    "build-ts-dense": "tsc src/core/transforms/dense.ts --outDir dist_ts/ && node dist_ts/transforms/dense.js",
-    "build-ts-densev2": "tsc src/core/transforms/denseV2.ts --outDir dist_ts/ && node dist_ts/transforms/denseV2.js"
+    "build-ts-serial": "tsc src/networks/serial.test.ts --outDir dist_ts/ && node dist_ts/networks/serial.test.js",
+    "build-ts-dense": "tsc src/layers/dense2.test.ts --outDir dist_ts/ && node dist_ts/layers/dense2.test.js"    
   },
   "repository": {
     "type": "git",
@@ -28,6 +28,7 @@
     "@babel/preset-typescript": "^7.12.1",
     "@rollup/plugin-commonjs": "^16.0.0",
     "@rollup/plugin-node-resolve": "^10.0.0",
+    "@types/express": "^4.17.9",
     "@types/jest": "^26.0.14",
     "@types/node": "^14.11.8",
     "babel-loader": "^8.1.0",
@@ -39,6 +40,9 @@
     "ts-loader": "^8.0.5"
   },
   "dependencies": {
-    "graceful-fs": "^4.2.4"
+    "express": "^4.17.1",
+    "graceful-fs": "^4.2.4",
+    "open": "^7.3.0",
+    "socket.io": "^3.0.4"
   }
 }

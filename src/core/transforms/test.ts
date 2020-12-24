@@ -2,7 +2,6 @@ import { PassThrough, Readable, Transform, Writable } from "stream";
 import * as fs from "fs";
 import { transpose, Transposer } from "./_mat";
 import { data } from "./data.interface";
-import { AllowAt, create_writer, formatMemory, logger } from "./log";
 import { matmul } from "./_mat";
 import { reader } from "./_reader";
 import { add, multiply, sub } from "./_basic";
@@ -21,7 +20,6 @@ matmul(
     genValues([1], [1, 2], 1, 0), 0, 
     genValues([1], [2, 2], 1, 1), 1
 )
-.pipe(logger("res"));
 
 counter.counter_emitter.on("finished", ()=>{
     console.log(counter.counts);

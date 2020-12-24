@@ -10,7 +10,7 @@ export class Reader extends Transform{
 
     constructor(
         private shape:number[],
-        private id?:number,
+        private iteration?:number,
     ){
         super({readableObjectMode:true, readableHighWaterMark:1});  
         this.tot = shape.reduce((a,b)=>a*b);
@@ -39,9 +39,9 @@ export class Reader extends Transform{
         const num = Number.parseFloat(value);
 
         this.push(<data>{
-            id:this.id?this.id:0,
+            id:0,
             index:this.i,
-            iteration:this.it,
+            iteration:this.iteration ? this.iteration : this.it,
             value:num,
             shape:this.shape,
         })
@@ -55,8 +55,8 @@ export class Reader extends Transform{
     }
 }
 
-export function reader(path:string, shape:number[], id?:number){
-    const read = new Reader(shape, id);
+export function reader(path:string, shape:number[], iteration?:number){
+    const read = new Reader(shape, iteration);
     createReadStream(path).pipe(read);
     return read;
 }

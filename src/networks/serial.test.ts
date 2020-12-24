@@ -1,30 +1,50 @@
 import { dense } from "../layers/dense";
 import { serial } from "./serial";
-import { genValues } from "../core/transforms/_gen";
-import { logger } from "../core/transforms/log";
+import { genRan, GenValsNormal, genValues } from "../core/transforms/_gen";
+import { logDetail, log, formatMemory, AllowOnly, logfn} from "../core/transforms/log";
+import { reader } from "../core/transforms/_reader";
+import { join } from "path";
 
-const model = serial();
+// const model = serial({
+//     log_loss:false,
+//     log_loss_at:1,
+//     loss:"CrossEntropy costfn",
+//     optimizer:"sgd"
+// });
 
-model.add(dense({
-    prev_neurons:100,
-    neurons:5,
-    activation:"sig",
-    learningRate:0.04
-}))
+// model.add(dense({
+//     prev_neurons:2,
+//     neurons:2,
+//     activation:"sig",
+//     learningRate:0.04
+// }))
 
-model.add(dense({
-    prev_neurons:5,
-    neurons:2,
-    activation:"sig",
-    learningRate:0.04
-}))
+// model.add(dense({
+//     prev_neurons:2,
+//     neurons:2,
+//     activation:"sig",
+//     learningRate:0.04
+// }))
 
-const input = genValues([1], [1, 100], 10);
-const output = genValues([1], [1, 2], 2);
 
-model.build(input, output);
+// let inputs = [];
+// let outputs = [];
 
-model.output?.pipe(logger("test"));
+// for (let index = 0; index < 1000; index++) {
+//     inputs.push(GenValsNormal([1], [1, 2], index));
+//     outputs.push(GenValsNormal([0,  1], [1, 2], index));
+// }
+
+// model.train( inputs, outputs );
+
+// model.outline.pipe(AllowOnly("iteration", 10)).pipe(logfn((data)=>{
+//     console.log(
+//                 "iteration:",data.iteration,
+//                 "index:",data.index, 
+//                 "value:",data.value, 
+//                 "Memory Usage:",formatMemory(process.memoryUsage().heapUsed),"MB"
+//             )
+// }));
 
 
 

@@ -140,3 +140,36 @@ export class IterationCounter extends Transform{
 }
 
 
+
+export class Counter extends Transform{
+    constructor(private name:string){
+        super({objectMode:true, highWaterMark:1});
+    }
+
+    public emitter = new EventEmitter();
+
+    public counts:{
+        [key:number]:number
+    } = {}
+
+    public in:{[key:number]:boolean} = {}
+
+    _transform(data:data, e:BufferEncoding, next:TransformCallback){        
+        if(!(data.iteration in this.counts)){
+            this.counts[data.iteration] = 1;
+        }else{
+            this.counts[data.iteration] += 1;
+        }
+
+        this.in[data.index] = true;
+
+        if(this.counts[data.iteration] >= data.shape.reduce((a,b)=>a*b)){
+            this.emitter.emit("finished", {name:this.name, it:data.iteration});
+            delete this.counts[data.iteration];
+
+        }            
+
+        this.push(data);
+        next();
+    }
+}
